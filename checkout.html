@@ -30,7 +30,21 @@
       <h1>Checkout</h1>
       <div id="summary" class="card" style="padding:16px"></div>
       <div class="card" style="padding:16px; margin-top:12px; display:grid; gap:12px">
-        <div class="row"><label style="min-width:120px">Your email *</label><input id="email" class="input" type="email" placeholder="you@example.com" required /></div>
+        <div class="row">
+          <label style="min-width:120px">Your email *</label>
+          <div style="flex-grow:1">
+            <input 
+              id="email" 
+              class="input" 
+              type="email" 
+              placeholder="you@example.com" 
+              pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+              title="Please enter a valid email address (e.g., name@example.com)"
+              required 
+            />
+            <div class="muted" style="font-size:0.8em;margin-top:4px;">Enter a valid email address where you'll receive the Canva links</div>
+          </div>
+        </div>
         <div class="row"><label style="min-width:120px">Message *</label><textarea id="message" class="input" placeholder="Please provide your order number and ensure your email is valid. The Canva link will be sent to your email." required style="min-height:80px; resize:vertical;"></textarea></div>
         <div class="row" style="align-items:flex-start">
           <div style="min-width:120px">Payment proof *</div>
@@ -254,8 +268,11 @@
         const messageVal = messageInput.value.trim();
         const screenshotFile = screenshotInput.files[0];
         
-        if (!emailVal) {
-          alert('Please enter your email address');
+        // Email validation regex
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        
+        if (!emailVal || !emailRegex.test(emailVal)) {
+          alert('Please enter a valid email address (e.g., example@domain.com)');
           emailInput.focus();
           return;
         }
