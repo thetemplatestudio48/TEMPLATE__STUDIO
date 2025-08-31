@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Template Studio</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="container">
+        <div class="row">
+          <div class="brand">
+            <img src="./assets/LOGO.jpg" alt="Template Studio Logo" class="logo" />
+            <span>Template Studio</span>
+          </div>
+          <nav class="nav">
+            <a href="./index.html">Home</a>
+            <a href="./ebook.html">Ebook</a>
+            <a href="./template.html">Template</a>
+            <a href="./resume.html">Resume</a>
+            <a href="./cart.html">Cart</a>
+            <select id="currencySelect">
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+              <option value="INR">INR</option>
+              <option value="NPR">NPR</option>
+              <option value="AUD">AUD</option>
+              <option value="CAD">CAD</option>
+            </select>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <h1>Templates</h1>
+      <div id="grid" class="grid"></div>
+    </main>
+
+    <footer class="footer">© <span id="year"></span> Template Studio</footer>
+
+    <script>
+      const productsUrl = './products.json';
+      const CART_KEY = 'cart-items';
+      const CURRENCY_KEY = 'store-currency';
+      const RATES_KEY = 'fx-rates-usd';
+      const RATES_TS_KEY = 'fx-rates-ts';
+      const RATES_TTL_MS = 12 * 60 * 60 * 1000;
+
+      function getCurrency(){ return localStorage.getItem(CURRENCY_KEY) || 'USD'; }
+      function setCurrency(code){ localStorage.setItem(CURRENCY_KEY, code); }
+      function getCachedRates(){
+        try {
+          const ts = parseInt(localStorage.getItem(RATES_TS_KEY) || '0', 10);
+          const now = Date.now();
+          if (now - ts < RATES_TTL_MS) {
+            const data = JSON.parse(localStorage.getItem(RATES_KEY) || 'null');
+            if (data && data.rates) return data;
+          }
+        } catch {}
+        return null;
+      }
+      async function getRates(){
+        const cached = getCachedRates();
+        if (cached) return cached;
+        try {
+          const res = await fetch('https://open.er-api.com/v6/latest/USD');
+          const data = await res.json();
+          if (data && data.result === 'success') {
+            localStorage.setItem(RATES_KEY, JSON.stringify({ base: 'USD', rates: data.rates }));
+            localStorage.setItem(RATES_TS_KEY, String(Date.now()));
+            return { base: 'USD', rates: data.rates };
+          }
+        } catch {}
+        // Fallback minimal rates
+        const fallback = { base: 'USD', rates: { USD: 1 } };
+        localStorage.setItem(RATES_KEY, JSON.stringify(fallback));
+        localStorage.setItem(RATES_TS_KEY, String(Date.now()));
+        return fallback;
+      }
+      async function formatPriceCents(cents){
+        const code = getCurrency();
+        const { rates } = await getRates();
+        const rate = (rates && rates[code]) ? rates[code] : 1;
+        const value = (cents / 100) * rate;
+        try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).format(value); } catch { return (code + ' ' + value.toFixed(2)); }
+      }
+
+      const fmt = v => (v / 100).toFixed(2);
+      const getCart = () => JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+      const setCart = (items) => localStorage.setItem(CART_KEY, JSON.stringify(items));
+      function addToCart(productId, quantity = 1) {
+        // Find the product to check its price
+        const products = JSON.parse(localStorage.getItem('admin-products') || '[]');
+        const product = products.find(p => p.id === productId);
+        
+        // Don't allow adding products with $0.00 price
+        if (product && (product.priceCents || 0) === 0) {
+          alert('Cannot add free products to cart. Please contact support if you need this product.');
+          return;
+        }
+        
+        const cart = getCart();
+        const item = cart.find(i => i.productId === productId);
+        if (item) item.quantity += quantity; else cart.push({ productId, quantity });
+        setCart(cart);
+        alert('Added to cart');
+      }
+      async function loadProducts() {
+        const grid = document.getElementById('grid');
+        if (!grid) {
+          console.error('Grid element not found');
+          return;
+        }
+
+        let products = [];
+        try {
+          const adminProducts = localStorage.getItem('admin-products');
+          console.log('Raw admin products:', adminProducts);
+          
+          if (adminProducts && adminProducts !== 'null' && adminProducts !== 'undefined') {
+            const list = JSON.parse(adminProducts);
+            console.log('Parsed products:', list);
+            
+            if (Array.isArray(list) && list.length > 0) {
+              products = list.filter(p => {
+                const hasHomeCategory = p?.categories?.includes('home');
+                console.log(`Product ${p?.title}: has home category? ${hasHomeCategory}`);
+                return hasHomeCategory;
+              });
+              console.log('Filtered products for home:', products);
+            } else {
+              console.log('No products found or list is empty');
+            }
+          } else {
+            console.log('No admin products found in localStorage');
+          }
+        } catch (error) {
+          console.error('Error loading admin products:', error);
+        }
+
+        if (products.length === 0) {
+          grid.innerHTML = '<div class="muted">No products available. Add products from the admin panel.</div>';
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        
+        for (const p of products) {
+          const priceText = await formatPriceCents(p.priceCents);
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <img src="${p.thumbnailUrl}" alt="${p.title}" loading="lazy" onerror="this.onerror=null;this.src='./assets/fallback.svg'" />
+            <div class="body">
+              <div>${p.title}</div>
+              <div class="muted">${p.description}</div>
+              <div class="row">
+                <span class="price">${priceText}</span>
+                <button class="btn primary" data-add="${p.id}">Add to cart</button>
+              </div>
+            </div>`;
+          fragment.appendChild(card);
+        }
+        
+        grid.innerHTML = '';
+        grid.appendChild(fragment);
+
+        // Add click event listeners for add to cart (if not already added)
+        if (!window._cartListenerAdded) {
+          document.body.addEventListener('click', (e) => {
+            const id = e.target && e.target.getAttribute && e.target.getAttribute('data-add');
+            if (id) addToCart(id, 1);
+          });
+          window._cartListenerAdded = true;
+        }
+      }
+
+      function initCurrencyUI(){
+        const sel = document.getElementById('currencySelect');
+        sel.value = getCurrency();
+        sel.onchange = async () => { setCurrency(sel.value); await loadProducts(); };
+      }
+
+      document.getElementById('year').textContent = new Date().getFullYear();
+      
+      initCurrencyUI();
+      loadProducts();
+      
+
+    </script>
+  </body>
+  </html>
