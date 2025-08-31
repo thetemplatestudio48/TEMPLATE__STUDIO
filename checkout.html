@@ -18,7 +18,7 @@
     <header class="header">
       <div class="container row" style="display:flex;justify-content:space-between;align-items:center">
         <div class="brand">
-          <img src="./LOGO.jpg" alt="Template Studio Logo" class="logo" />
+          <img src="./assets/LOGO.jpg" alt="Template Studio Logo" class="logo" />
           <span>Template Studio</span>
         </div>
         <nav class="nav">
@@ -30,8 +30,8 @@
       <h1>Checkout</h1>
       <div id="summary" class="card" style="padding:16px"></div>
       <div class="card" style="padding:16px; margin-top:12px; display:grid; gap:12px">
-        <div class="row"><label style="min-width:120px">Your email *</label><input id="email" class="input" placeholder="you@example.com" required /></div>
-        <div class="row"><label style="min-width:120px">Message *</label><textarea id="message" class="input" placeholder="Write order details and id or add something" required style="min-height:80px; resize:vertical;"></textarea></div>
+        <div class="row"><label style="min-width:120px">Your email *</label><input id="email" class="input" type="email" placeholder="you@example.com" required /></div>
+        <div class="row"><label style="min-width:120px">Message *</label><textarea id="message" class="input" placeholder="Please provide your order number and ensure your email is valid. The Canva link will be sent to your email." required style="min-height:80px; resize:vertical;"></textarea></div>
         <div class="row" style="align-items:flex-start">
           <div style="min-width:120px">Payment proof *</div>
           <div>
@@ -63,12 +63,37 @@
           <select id="method" class="input">
             <option value="" selected disabled>Choose a method</option>
             <option value="esewa">eSewa</option>
-            <option value="bank">Bank</option>
+            <option value="paypal">PayPal</option>
             <option value="payoneer">Payoneer</option>
+            <option value="bank">Bank Transfer</option>
           </select>
-          <div style="position:relative; display:grid; place-items:center;">
+          <div id="paymentDetails" style="display:none; margin-top:12px; padding:12px; background:rgba(255,255,255,0.05); border-radius:8px;">
+            <div id="esewaDetails" class="payment-details" style="display:none">
+              <h4 style="margin:0 0 8px 0">eSewa Payment Details</h4>
+              <p style="margin:0 0 4px 0">Scan the QR code or send to:</p>
+              <p style="margin:0 0 8px 0"><strong>eSewa ID:</strong> 9840251094</p>
+            </div>
+            <div id="paypalDetails" class="payment-details" style="display:none">
+              <h4 style="margin:0 0 8px 0">PayPal Payment Details</h4>
+              <p style="margin:0 0 4px 0">Send payment to:</p>
+              <p style="margin:0 0 8px 0"><strong>PayPal:</strong> templatestudio@gmail.com</p>
+            </div>
+            <div id="payoneerDetails" class="payment-details" style="display:none">
+              <h4 style="margin:0 0 8px 0">Payoneer Payment Details</h4>
+              <p style="margin:0 0 4px 0">Send payment to:</p>
+              <p style="margin:0 0 8px 0"><strong>Email:</strong> templatestudio@gmail.com</p>
+            </div>
+            <div id="bankDetails" class="payment-details" style="display:none">
+              <h4 style="margin:0 0 8px 0">Bank Transfer Details</h4>
+              <p style="margin:0 0 4px 0"><strong>Bank:</strong> Nepal Bank Limited</p>
+              <p style="margin:0 0 4px 0"><strong>Account Name:</strong> Template Studio</p>
+              <p style="margin:0 0 4px 0"><strong>Account Number:</strong> 1234567890</p>
+              <p style="margin:0 0 8px 0"><strong>Branch:</strong> Main Branch</p>
+            </div>
+          </div>
+          <div style="position:relative; display:grid; place-items:center; margin-top:12px;">
             <button id="qrBack" aria-label="Back" title="Back" class="btn" style="position:absolute; right:8px; top:8px; display:none; padding:4px 8px">✕</button>
-            <img id="qrImg" src="" alt="QR Code" style="display:none; max-width:100%; height:auto; border:1px solid var(--border); border-radius:12px" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('beforeend', '<div class=\'muted\'>QR image not found. Place assets/qr-esewa.png / qr-bank.png / qr-payoneer.png</div>')" />
+            <img id="qrImg" src="" alt="QR Code" style="display:none; max-width:100%; height:auto; border:1px solid var(--border); border-radius:12px" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('beforeend', '<div class=\'muted\'>QR code not available for this payment method</div>')" />
           </div>
         </div>
       </div>
@@ -162,11 +187,32 @@
       
       document.getElementById('method').addEventListener('change', (e) => {
         const v = e.target.value;
-        const map = { esewa: './assets/qr-esewa.png', bank: './assets/qr-bank.png', payoneer: './assets/qr-payoneer.png' };
+        const qrMap = { 
+          esewa: './assets/qr-esewa.png',
+          paypal: './assets/qr-paypal.svg',
+          payoneer: './assets/qr-payoneer.svg',
+          bank: './assets/qr-bank.svg'
+        };
+        
+        // Show/hide payment details
+        document.getElementById('paymentDetails').style.display = v ? 'block' : 'none';
+        document.querySelectorAll('.payment-details').forEach(el => el.style.display = 'none');
+        if (v) {
+          document.getElementById(v + 'Details').style.display = 'block';
+        }
+        
+        // Handle QR code
         const img = document.getElementById('qrImg');
-        const src = map[v];
+        const src = qrMap[v];
         const back = document.getElementById('qrBack');
-        if (src) { img.src = src; img.style.display = ''; back.style.display=''; }
+        if (src) { 
+          img.src = src; 
+          img.style.display = 'block';
+          back.style.display = 'block';
+        } else {
+          img.style.display = 'none';
+          back.style.display = 'none';
+        }
       });
       
       document.getElementById('qrBack').onclick = () => {
