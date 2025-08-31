@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Your Cart • Template Studio</title>
+    <link rel="stylesheet" href="./style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+    <script> (function(){ emailjs.init('i9YXPhDlFNnEo68Tm'); })(); </script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="container row" style="display:flex;justify-content:space-between;align-items:center">
+        <div class="brand">
+          <img src="./LOGO.jpg" alt="Template Studio Logo" class="logo" />
+          <span>Template Studio</span>
+        </div>
+        <nav class="nav" style="display:flex;align-items:center;gap:8px">
+          <a href="./index.html">Home</a>
+          <select id="currencySelect" class="input" style="padding:4px 8px">
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+            <option value="INR">INR</option>
+            <option value="NPR">NPR</option>
+            <option value="AUD">AUD</option>
+            <option value="CAD">CAD</option>
+          </select>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <h1>Your Cart</h1>
+      <table class="table">
+        <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead>
+        <tbody id="table"></tbody>
+      </table>
+      <div class="row" style="margin-top:12px">
+        <strong>Total: <span id="total">$0.00</span></strong>
+        <div class="row" style="gap:8px">
+          <input id="email" class="input" type="email" placeholder="Your email" />
+          <button id="checkout" class="btn primary">Checkout</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">© <span id="year"></span> Template Studio</footer>
+
+    <script>
+      const CART_KEY = 'cart-items';
+      const ADMIN_KEY = 'admin-products';
+      const productsUrl = './products.json';
+      const CURRENCY_KEY = 'store-currency';
+      const RATES_KEY = 'fx-rates-usd';
+      const RATES_TS_KEY = 'fx-rates-ts';
+      const RATES_TTL_MS = 12 * 60 * 60 * 1000;
+      function getCurrency(){ return localStorage.getItem(CURRENCY_KEY) || 'USD'; }
+      function setCurrency(code){ localStorage.setItem(CURRENCY_KEY, code); }
+      function getCachedRates(){ try { const ts = parseInt(localStorage.getItem(RATES_TS_KEY) || '0', 10); if (Date.now() - ts < RATES_TTL_MS) { const data = JSON.parse(localStorage.getItem(RATES_KEY) || 'null'); if (data && data.rates) return data; } } catch {} return null; }
+      async function getRates(){ const cached = getCachedRates(); if (cached) return cached; try { const res = await fetch('https://open.er-api.com/v6/latest/USD'); const data = await res.json(); if (data && data.result === 'success') { localStorage.setItem(RATES_KEY, JSON.stringify({ base: 'USD', rates: data.rates })); localStorage.setItem(RATES_TS_KEY, String(Date.now())); return { base: 'USD', rates: data.rates }; } } catch {} const fallback = { base: 'USD', rates: { USD: 1 } }; localStorage.setItem(RATES_KEY, JSON.stringify(fallback)); localStorage.setItem(RATES_TS_KEY, String(Date.now())); return fallback; }
+      async function formatPriceCents(cents){ const code = getCurrency(); const { rates } = await getRates(); const rate = (rates && rates[code]) ? rates[code] : 1; const value = (cents / 100) * rate; try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).format(value); } catch { return (code + ' ' + value.toFixed(2)); } }
+      const fmt = v => (v / 100).toFixed(2);
+      const getCart = () => JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+      const setCart = (items) => localStorage.setItem(CART_KEY, JSON.stringify(items));
+      function remove(productId) { setCart(getCart().filter(i => i.productId !== productId)); render(); }
+      async function loadProducts() {
+        try {
+          const a = localStorage.getItem(ADMIN_KEY);
+          if (a) { 
+            const list = JSON.parse(a); 
+            if (Array.isArray(list) && list.length) return list; 
+          }
+        } catch {}
+        try { const res = await fetch(productsUrl); return await res.json(); } catch { return []; }
+      }
+      async function render() {
+        const products = await loadProducts();
+        const items = getCart(); 
+        const tbody = document.getElementById('table'); 
+        tbody.innerHTML='';
+        
+        // Filter out items with $0.00 prices
+        const validItems = items.filter(i => {
+          const p = products.find(pp => pp.id === i.productId);
+          return p && (p.priceCents || 0) > 0;
+        });
+        
+        const invalidItems = items.filter(i => {
+          const p = products.find(pp => pp.id === i.productId);
+          return p && (p.priceCents || 0) === 0;
+        });
+        
+        // Remove invalid items from cart
+        if (invalidItems.length > 0) {
+          const validCart = items.filter(i => {
+            const p = products.find(pp => pp.id === i.productId);
+            return p && (p.priceCents || 0) > 0;
+          });
+          setCart(validCart);
+        }
+        
+        let total = 0; 
+        for (const i of validItems) { 
+          const p = products.find(pp => pp.id === i.productId); 
+          if (!p) continue; 
+          const lineCents = (p.priceCents || 0) * i.quantity; 
+          total += lineCents; 
+          const tr = document.createElement('tr'); 
+          const priceText = await formatPriceCents(lineCents); 
+          tr.innerHTML = `<td>${p.title || i.productId}</td><td>${i.quantity}</td><td>${priceText}</td><td><button class="btn danger" data-remove="${i.productId}">Remove</button></td>`; 
+          tbody.appendChild(tr); 
+        }
+        document.getElementById('total').textContent = await formatPriceCents(total);
+      }
+      document.addEventListener('click', (e)=>{ const id = e.target && e.target.getAttribute && e.target.getAttribute('data-remove'); if (id) { remove(id); } });
+      document.getElementById('year').textContent = new Date().toLocaleDateString(undefined, { year: 'numeric' });
+      function initCurrencyUI(){ const sel = document.getElementById('currencySelect'); sel.value = getCurrency(); sel.onchange = async () => { setCurrency(sel.value); await render(); }; }
+      initCurrencyUI();
+      render();
+      document.getElementById('checkout').onclick = async () => {
+        const email = document.getElementById('email').value.trim();
+        if (!email) { alert('Enter your email'); return; }
+        const products = await loadProducts();
+        const items = getCart().map(i => { 
+          const p = products.find(pp => pp.id === i.productId); 
+          return { 
+            productId: i.productId, // Keep the original productId
+            id: i.productId,        // Also keep id for backward compatibility
+            title: p?.title || i.productId, 
+            quantity: i.quantity, 
+            priceCents: p?.priceCents || 0 
+          }; 
+        });
+        const totalCents = items.reduce((s,i)=> s + (i.priceCents||0)*i.quantity, 0);
+        if (!items.length || totalCents === 0) { alert('Select a product'); return; }
+        
+        console.log('Cart checkout - items being sent:', items);
+        console.log('Cart checkout - first item structure:', items[0]);
+        
+        localStorage.setItem('last-order', JSON.stringify({ email, items, totalCents }));
+        window.location.href = './checkout.html';
+      };
+    </script>
+  </body>
+  </html>
