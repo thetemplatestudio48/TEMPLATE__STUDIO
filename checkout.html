@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Checkout • Template Studio</title>
+    <link rel="stylesheet" href="./style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+    <script> 
+      (function(){ 
+        console.log('Initializing EmailJS...');
+        emailjs.init('i9YXPhDlFNnEo68Tm'); 
+        console.log('EmailJS initialized with public key:', 'i9YXPhDlFNnEo68Tm');
+      })(); 
+    </script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="container row" style="display:flex;justify-content:space-between;align-items:center">
+        <div class="brand">
+          <img src="./LOGO.jpg" alt="Template Studio Logo" class="logo" />
+          <span>Template Studio</span>
+        </div>
+        <nav class="nav">
+          <a href="./index.html">Home</a>
+        </nav>
+      </div>
+    </header>
+    <main class="container">
+      <h1>Checkout</h1>
+      <div id="summary" class="card" style="padding:16px"></div>
+      <div class="card" style="padding:16px; margin-top:12px; display:grid; gap:12px">
+        <div class="row"><label style="min-width:120px">Your email *</label><input id="email" class="input" placeholder="you@example.com" required /></div>
+        <div class="row"><label style="min-width:120px">Message *</label><textarea id="message" class="input" placeholder="Write order details and id or add something" required style="min-height:80px; resize:vertical;"></textarea></div>
+        <div class="row" style="align-items:flex-start">
+          <div style="min-width:120px">Payment proof *</div>
+          <div>
+            <input id="screenshot" type="file" accept="image/*" required />
+            <div class="muted" style="margin-top:6px">Upload a screenshot after you scan and pay.</div>
+            <img id="shotPrev" src="" alt="Preview" style="display:none;max-width:260px;max-height:200px;margin-top:8px;border:1px solid var(--border);border-radius:8px" />
+          </div>
+        </div>
+        <div class="row" style="gap:8px">
+          <button id="showQR" class="btn">Show QR to Pay</button>
+          <button id="confirm" class="btn primary">Confirm Order</button>
+          <a class="btn" href="./cart.html">Back to cart</a>
+        </div>
+        <div style="margin-top:8px;">
+          <button class="btn" onclick="testEmailJS()" style="font-size:12px;padding:4px 8px;">Test EmailJS</button>
+          <span class="muted" style="margin-left:8px;font-size:12px;">Test email service before placing order</span>
+        </div>
+      </div>
+    </main>
+
+    <div id="qrModal" class="modal">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <h3>Scan to Pay</h3>
+          <button id="closeQR" class="btn">Close</button>
+        </div>
+        <div style="display:grid; gap:12px; padding:12px">
+          <label>Choose payment method</label>
+          <select id="method" class="input">
+            <option value="" selected disabled>Choose a method</option>
+            <option value="esewa">eSewa</option>
+            <option value="bank">Bank</option>
+            <option value="payoneer">Payoneer</option>
+          </select>
+          <div style="position:relative; display:grid; place-items:center;">
+            <button id="qrBack" aria-label="Back" title="Back" class="btn" style="position:absolute; right:8px; top:8px; display:none; padding:4px 8px">✕</button>
+            <img id="qrImg" src="" alt="QR Code" style="display:none; max-width:100%; height:auto; border:1px solid var(--border); border-radius:12px" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('beforeend', '<div class=\'muted\'>QR image not found. Place assets/qr-esewa.png / qr-bank.png / qr-payoneer.png</div>')" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="footer">© <span id="year"></span> Template Studio</footer>
+
+    <script>
+      const fmt = v => (v / 100).toFixed(2);
+      const order = JSON.parse(localStorage.getItem('last-order') || 'null');
+      document.getElementById('year').textContent = new Date().getFullYear();
+      if (!order) {
+        document.getElementById('summary').innerHTML = '<div class="muted">No order to checkout.</div>';
+      } else {
+        // Filter out products with $0.00 prices
+        const validItems = order.items.filter(i => (i.priceCents * i.quantity) > 0);
+        const invalidItems = order.items.filter(i => (i.priceCents * i.quantity) === 0);
+        
+        let list = '';
+        if (validItems.length > 0) {
+          list = validItems.map(i => `<li><strong>${i.title}</strong> × ${i.quantity} — $${fmt(i.priceCents*i.quantity)}</li>`).join('');
+        }
+        
+        const totalCents = validItems.reduce((s, i) => s + (i.priceCents * i.quantity), 0);
+        
+        document.getElementById('summary').innerHTML = `
+          <p><strong>Email:</strong> ${order.email}</p>
+          ${list ? `<ul style="margin:0 0 8px 16px">${list}</ul>` : '<p class="muted">No valid products found.</p>'}
+          <p><strong>Total:</strong> $${fmt(totalCents)}</p>
+        `;
+      }
+
+      const ordersKey = 'orders';
+      const readOrders = () => JSON.parse(localStorage.getItem(ordersKey) || '[]');
+      const writeOrders = (list) => localStorage.setItem(ordersKey, JSON.stringify(list));
+      
+      // Generate order ID starting from 001
+      function generateOrderId() {
+        const orders = readOrders();
+        
+        // Find the highest existing order ID
+        let highestId = 0;
+        orders.forEach(order => {
+          // Check if order.id is a number (001, 002, etc.)
+          if (order.id && /^\d+$/.test(order.id)) {
+            const numId = parseInt(order.id, 10);
+            if (numId > highestId) {
+              highestId = numId;
+            }
+          }
+        });
+        
+        // Generate next sequential ID
+        const nextId = highestId + 1;
+        return nextId.toString().padStart(3, '0'); // 001, 002, 003, etc.
+      }
+      
+      // Test EmailJS connection
+      async function testEmailJS() {
+        try {
+          console.log('Testing EmailJS connection...');
+          const testData = {
+            to_email: 'birajshrestha145@gmail.com',
+            from_email: 'test@example.com',
+            order_id: 'TEST001',
+            customer_email: 'test@example.com',
+            order_items: 'Test Product × 1 — $10.00',
+            order_total: '10.00',
+            customer_message: 'This is a test message',
+            payment_proof: 'Test payment'
+          };
+          
+          const result = await emailjs.send('service_a2r2ht3', 'template_0bxfv93', testData);
+          console.log('EmailJS test successful:', result);
+          alert('EmailJS is working! Test email sent.');
+          return true;
+        } catch (error) {
+          console.error('EmailJS test failed:', error);
+          alert('EmailJS test failed: ' + (error.message || error));
+          return false;
+        }
+      }
+
+      document.getElementById('showQR').onclick = () => {
+        document.getElementById('qrModal').classList.add('open');
+        const sel = document.getElementById('method');
+        sel.value = ""; // reset placeholder
+        const img = document.getElementById('qrImg');
+        img.style.display = 'none';
+        img.removeAttribute('src');
+      };
+      
+      document.getElementById('method').addEventListener('change', (e) => {
+        const v = e.target.value;
+        const map = { esewa: './assets/qr-esewa.png', bank: './assets/qr-bank.png', payoneer: './assets/qr-payoneer.png' };
+        const img = document.getElementById('qrImg');
+        const src = map[v];
+        const back = document.getElementById('qrBack');
+        if (src) { img.src = src; img.style.display = ''; back.style.display=''; }
+      });
+      
+      document.getElementById('qrBack').onclick = () => {
+        const sel = document.getElementById('method');
+        sel.value = "";
+        const img = document.getElementById('qrImg');
+        img.style.display = 'none';
+        img.removeAttribute('src');
+        document.getElementById('qrBack').style.display='none';
+      };
+      
+      document.getElementById('closeQR').onclick = () => { document.getElementById('qrModal').classList.remove('open'); };
+      
+      document.getElementById('screenshot').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => { const img = document.getElementById('shotPrev'); img.src = reader.result; img.style.display='block'; };
+        reader.readAsDataURL(file);
+      });
+
+      document.getElementById('confirm').onclick = async () => {
+        if (!order) { 
+          alert('No order found. Please go back to cart and try again.'); 
+          return; 
+        }
+        
+        console.log('=== ORDER CREATION DEBUG ===');
+        console.log('Original order:', order);
+        console.log('Order items:', order.items);
+        console.log('First item keys:', Object.keys(order.items[0] || {}));
+        console.log('First item:', order.items[0]);
+        
+        const emailInput = document.getElementById('email');
+        const messageInput = document.getElementById('message');
+        const screenshotInput = document.getElementById('screenshot');
+        
+        // Validate required fields
+        const emailVal = emailInput.value.trim();
+        const messageVal = messageInput.value.trim();
+        const screenshotFile = screenshotInput.files[0];
+        
+        if (!emailVal) {
+          alert('Please enter your email address');
+          emailInput.focus();
+          return;
+        }
+        
+        if (!messageVal) {
+          alert('Please write your order details or message');
+          messageInput.focus();
+          return;
+        }
+        
+        if (!screenshotFile) {
+          alert('Please upload payment proof screenshot');
+          screenshotInput.focus();
+          return;
+        }
+        
+        // Generate order ID
+        const orderId = generateOrderId();
+        
+        try {
+          // Process screenshot file
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const screenshotData = e.target.result;
+            
+            try {
+              // Send email with order details using EmailJS
+              console.log('Attempting to send email via EmailJS...');
+              
+              // Prepare email data
+              const emailData = {
+                to_email: 'birajshrestha145@gmail.com',
+                from_email: emailVal,
+                order_id: orderId,
+                customer_email: emailVal,
+                order_items: order.items.map(item => `${item.title} × ${item.quantity} — $${(item.priceCents/100).toFixed(2)}`).join('\n'),
+                order_total: (order.totalCents/100).toFixed(2),
+                customer_message: messageVal,
+                message: messageVal,
+                customer_note: messageVal,
+                note: messageVal,
+                payment_proof: 'Screenshot uploaded'
+              };
+              
+              console.log('EmailJS data:', emailData);
+              console.log('=== MESSAGE DEBUG ===');
+              console.log('Message value:', messageVal);
+              console.log('Message length:', messageVal.length);
+              console.log('Message in emailData:', emailData.customer_message);
+              console.log('=====================');
+              
+              // Send email using EmailJS
+              const result = await emailjs.send(
+                'service_a2r2ht3',  // Your EmailJS service ID
+                'template_0bxfv93', // Your EmailJS template ID
+                emailData
+              );
+              
+              console.log('Email sent successfully via EmailJS:', result);
+              
+              // Create new order with proper product ID preservation
+              const newOrder = {
+                id: orderId,
+                createdAt: new Date().toISOString(),
+                email: emailVal,
+                items: order.items.filter(i => (i.priceCents * i.quantity) > 0).map(item => {
+                  // Ensure we have the correct product ID
+                  const productId = item.productId || item.id || item.product_id;
+                  console.log('Processing item:', item);
+                  console.log('Product ID found:', productId);
+                  
+                  return {
+                    productId: productId,
+                    title: item.title,
+                    quantity: item.quantity,
+                    priceCents: item.priceCents
+                  };
+                }),
+                totalCents: order.items.filter(i => (i.priceCents * i.quantity) > 0).reduce((s, i) => s + (i.priceCents * i.quantity), 0),
+                message: messageVal,
+                screenshot: screenshotData,
+                status: 'pending'
+              };
+              
+              console.log('New order created:', newOrder);
+              console.log('Order items with product IDs:', newOrder.items);
+              console.log('=== END ORDER CREATION DEBUG ===');
+              
+              // Save order
+              const list = readOrders(); 
+              list.unshift(newOrder); 
+              writeOrders(list);
+              
+              // Clear form
+              emailInput.value = '';
+              messageInput.value = '';
+              screenshotInput.value = '';
+              document.getElementById('shotPrev').style.display = 'none';
+              
+              // Show success message
+              alert(`Order #${orderId} placed successfully! Email sent. We will review your payment and send you the Canva links within 24 hours.`);
+              
+              // Clear cart and redirect
+              localStorage.removeItem('cart-items');
+              localStorage.removeItem('last-order');
+              window.location.href = './index.html';
+              
+            } catch (emailError) {
+              console.error('EmailJS failed:', emailError);
+              console.error('Error details:', {
+                service: 'service_a2r2ht3',
+                template: 'template_0bxfv93',
+                error: emailError.message || emailError
+              });
+              
+              // Show specific error message
+              let errorMessage = 'Email failed to send. ';
+              if (emailError.message) {
+                errorMessage += emailError.message;
+              } else {
+                errorMessage += 'Please check EmailJS configuration.';
+              }
+              
+              alert(errorMessage);
+              
+              // Still save the order with proper product ID preservation
+              const newOrder = {
+                id: orderId,
+                createdAt: new Date().toISOString(),
+                email: emailVal,
+                items: order.items.filter(i => (i.priceCents * i.quantity) > 0).map(item => {
+                  const productId = item.productId || item.id || item.product_id;
+                  return {
+                    productId: productId,
+                    title: item.title,
+                    quantity: item.quantity,
+                    priceCents: item.priceCents
+                  };
+                }),
+                totalCents: order.items.filter(i => (i.priceCents * i.quantity) > 0).reduce((s, i) => s + (i.priceCents * i.quantity), 0),
+                message: messageVal,
+                screenshot: screenshotData,
+                status: 'pending'
+              };
+              
+              const list = readOrders(); 
+              list.unshift(newOrder); 
+              writeOrders(list);
+              
+              // Clear form
+              emailInput.value = '';
+              messageInput.value = '';
+              screenshotInput.value = '';
+              document.getElementById('shotPrev').style.display = 'none';
+              
+              alert(`Order #${orderId} saved! Email failed but order was recorded.`);
+              console.log('Order saved successfully despite email failure');
+              localStorage.removeItem('cart-items');
+              localStorage.removeItem('last-order');
+              window.location.href = './index.html';
+            }
+          };
+          
+          reader.readAsDataURL(screenshotFile);
+          
+        } catch (e) {
+          console.error('Order processing failed:', e);
+          alert('Failed to process order. Please try again.');
+        }
+      };
+    </script>
+  </body>
+  </html>
