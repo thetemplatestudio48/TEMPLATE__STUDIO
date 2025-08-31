@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#1f2937"/>
+      <stop offset="1" stop-color="#0b0c10"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#g)"/>
+  <g fill="#9aa4b2">
+    <circle cx="200" cy="110" r="40" fill="#111827" stroke="#374151"/>
+    <path d="M120 170l50-50 35 35 30-30 45 45z" fill="#374151"/>
+  </g>
+  <text x="200" y="210" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#9aa4b2">Image unavailable</text>
+</svg>
+
