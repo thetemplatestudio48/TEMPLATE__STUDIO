@@ -293,6 +293,23 @@
         });
         
         console.log('Canva links result:', canvaLinks);
+
+        // Prepare email content
+        const validLinks = canvaLinks.filter(item => item.found);
+        const emailBody = `Dear Customer,
+
+Thank you for your purchase from Template Studio!
+
+Here are your Canva template links:
+${validLinks.map(item => `\n${item.title}:\n${item.link}`).join('\n\n')}
+
+If you have any questions, please don't hesitate to contact us.
+
+Best regards,
+Template Studio Team`;
+
+        const emailSubject = `Your Template Studio Order #${order.id} - Canva Links`;
+        const mailtoLink = `mailto:${order.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
         
         // Create modal to show Canva links
         const modal = document.createElement('div');
@@ -332,7 +349,10 @@
               ${linksHtml}
             </div>
             <div style="margin-top:16px;">
-              <button class="btn primary" onclick="markAsDelivered('${orderId}')">Mark as Delivered</button>
+              <div class="row" style="gap:8px;">
+                <a href="${mailtoLink}" class="btn success">Send Links via Email</a>
+                <button class="btn primary" onclick="markAsDelivered('${orderId}')">Mark as Delivered</button>
+              </div>
             </div>
           </div>
         `;
