@@ -130,57 +130,60 @@
         }
 
         let products = [];
+        
         try {
-          const adminProducts = localStorage.getItem('admin-products');
-          console.log('Raw admin products:', adminProducts);
+          // Get products from localStorage
+          const storedProducts = localStorage.getItem('admin-products');
+          console.log('Checking stored products...');
           
-          if (adminProducts && adminProducts !== 'null' && adminProducts !== 'undefined') {
-            const list = JSON.parse(adminProducts);
-            console.log('Parsed products:', list);
-            
-            if (Array.isArray(list) && list.length > 0) {
-              products = list.filter(p => {
-                const hasHomeCategory = p?.categories?.includes('home');
-                console.log(`Product ${p?.title}: has home category? ${hasHomeCategory}`);
-                return hasHomeCategory;
-              });
-              console.log('Filtered products for home:', products);
-            } else {
-              console.log('No products found or list is empty');
-            }
-          } else {
-            console.log('No admin products found in localStorage');
+          if (!storedProducts) {
+            throw new Error('No products found in storage');
           }
+
+          // Parse the stored products
+          const parsedProducts = JSON.parse(storedProducts);
+          if (!Array.isArray(parsedProducts)) {
+            throw new Error('Invalid product data format');
+          }
+
+          // Filter products for home page
+          products = parsedProducts.filter(p => 
+            p && p.categories && Array.isArray(p.categories) && p.categories.includes('home')
+          );
+          console.log(`Found ${products.length} products for home page`);
+          
+          if (products.length === 0) {
+            grid.innerHTML = '<div class="muted">No products available at the moment.</div>';
+            return;
+          }
+
+          // Create and append product cards
+          const fragment = document.createDocumentFragment();
+          
+          for (const p of products) {
+            const priceText = await formatPriceCents(p.priceCents);
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <img src="${p.thumbnailUrl}" alt="${p.title}" loading="lazy" onerror="this.onerror=null;this.src='./assets/fallback.svg'" />
+              <div class="body">
+                <div>${p.title}</div>
+                <div class="muted">${p.description}</div>
+                <div class="row">
+                  <span class="price">${priceText}</span>
+                  <button class="btn primary" data-add="${p.id}">Add to cart</button>
+                </div>
+              </div>`;
+            fragment.appendChild(card);
+          }
+          
+          grid.innerHTML = '';
+          grid.appendChild(fragment);
+          
         } catch (error) {
-          console.error('Error loading admin products:', error);
-        }
-
-        if (products.length === 0) {
+          console.error('Error loading products:', error);
           grid.innerHTML = '<div class="muted">No products available at the moment.</div>';
-          return;
         }
-
-        const fragment = document.createDocumentFragment();
-        
-        for (const p of products) {
-          const priceText = await formatPriceCents(p.priceCents);
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `
-            <img src="${p.thumbnailUrl}" alt="${p.title}" loading="lazy" onerror="this.onerror=null;this.src='./assets/fallback.svg'" />
-            <div class="body">
-              <div>${p.title}</div>
-              <div class="muted">${p.description}</div>
-              <div class="row">
-                <span class="price">${priceText}</span>
-                <button class="btn primary" data-add="${p.id}">Add to cart</button>
-              </div>
-            </div>`;
-          fragment.appendChild(card);
-        }
-        
-        grid.innerHTML = '';
-        grid.appendChild(fragment);
 
         // Add click event listeners for add to cart (if not already added)
         if (!window._cartListenerAdded) {
