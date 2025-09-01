@@ -54,10 +54,44 @@
             <img id="shotPrev" src="" alt="Preview" style="display:none;max-width:260px;max-height:200px;margin-top:8px;border:1px solid var(--border);border-radius:8px" />
           </div>
         </div>
-        <div class="row" style="gap:8px">
-          <button id="showQR" class="btn">Show QR to Pay</button>
-          <button id="confirm" class="btn primary">Confirm Order</button>
-          <a class="btn" href="./cart.html">Back to cart</a>
+        <div style="display:grid; gap:12px">
+          <div class="row">
+            <label style="min-width:120px">Payment Method *</label>
+            <select id="method" class="input" required>
+              <option value="" selected disabled>Select payment method</option>
+              <option value="esewa">eSewa</option>
+              <option value="paypal">PayPal</option>
+              <option value="payoneer">Payoneer</option>
+              <option value="bank">Bank Transfer</option>
+            </select>
+          </div>
+          
+          <div id="paymentDetails" style="display:none; margin-left: 120px; padding:12px; background:rgba(255,255,255,0.05); border-radius:8px;">
+            <div id="esewaDetails" class="payment-details" style="display:none">
+              <h4 style="margin:0 0 8px 0">eSewa Payment Details</h4>
+              <p style="margin:0 0 4px 0">Send payment to:</p>
+              <p style="margin:0 0 8px 0"><strong>eSewa ID:</strong> 9828808007</p>
+              <img src="./assets/qr-esewa.png" alt="eSewa QR" style="max-width:200px; border-radius:8px;" />
+            </div>
+            <div id="payoneerDetails" class="payment-details" style="display:none">
+              <h4 style="margin:0 0 8px 0">Payoneer Payment Details</h4>
+              <p style="margin:0 0 4px 0">Send payment to:</p>
+              <p style="margin:0 0 8px 0"><strong>Email:</strong> thetemplatestudio48@gmail.com</p>
+            </div>
+            <div id="bankDetails" class="payment-details" style="display:none">
+              <h4 style="margin:0 0 8px 0">Bank Transfer Details</h4>
+              <p style="margin:0 0 4px 0"><strong>Bank:</strong> Siddhartha bank limited</p>
+              <p style="margin:0 0 4px 0"><strong>Account Name:</strong> Biraj Gamal</p>
+              <p style="margin:0 0 4px 0"><strong>Account Number:</strong> 55507531425</p>
+              <p style="margin:0 0 8px 0"><strong>Branch:</strong> Kalopul Branch</p>
+              <img src="./assets/qr-bank.jpg" alt="Bank QR" style="max-width:200px; border-radius:8px;" />
+            </div>
+          </div>
+
+          <div class="row" style="gap:8px">
+            <button id="confirm" class="btn primary">Confirm Order</button>
+            <a class="btn" href="./cart.html">Back to cart</a>
+          </div>
         </div>
         <div style="margin-top:8px;">
           <button class="btn" onclick="testEmailJS()" style="font-size:12px;padding:4px 8px;">Test EmailJS</button>
@@ -190,23 +224,8 @@
         }
       }
 
-      document.getElementById('showQR').onclick = () => {
-        document.getElementById('qrModal').classList.add('open');
-        const sel = document.getElementById('method');
-        sel.value = ""; // reset placeholder
-        const img = document.getElementById('qrImg');
-        img.style.display = 'none';
-        img.removeAttribute('src');
-      };
-      
       document.getElementById('method').addEventListener('change', (e) => {
         const v = e.target.value;
-        const qrMap = { 
-          esewa: './assets/qr-esewa.png',
-          paypal: './assets/qr-paypal.svg',
-          payoneer: './assets/qr-payoneer.svg',
-          bank: './assets/qr-bank.svg'
-        };
         
         // Show/hide payment details
         document.getElementById('paymentDetails').style.display = v ? 'block' : 'none';
@@ -214,31 +233,7 @@
         if (v) {
           document.getElementById(v + 'Details').style.display = 'block';
         }
-        
-        // Handle QR code
-        const img = document.getElementById('qrImg');
-        const src = qrMap[v];
-        const back = document.getElementById('qrBack');
-        if (src) { 
-          img.src = src; 
-          img.style.display = 'block';
-          back.style.display = 'block';
-        } else {
-          img.style.display = 'none';
-          back.style.display = 'none';
-        }
       });
-      
-      document.getElementById('qrBack').onclick = () => {
-        const sel = document.getElementById('method');
-        sel.value = "";
-        const img = document.getElementById('qrImg');
-        img.style.display = 'none';
-        img.removeAttribute('src');
-        document.getElementById('qrBack').style.display='none';
-      };
-      
-      document.getElementById('closeQR').onclick = () => { document.getElementById('qrModal').classList.remove('open'); };
       
       document.getElementById('screenshot').addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0]; if (!file) return;
