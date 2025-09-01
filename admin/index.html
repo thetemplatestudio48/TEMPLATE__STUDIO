@@ -572,12 +572,13 @@ Template Studio Team`;
         try {
           console.log('Admin panel initializing...');
           
-          // Check if we have products, if not start with empty array
-          if (!read()) {
-            console.log('No products found, starting with empty list');
+          // Check if we have products, if not get from localStorage
+          const existingProducts = read();
+          if (!existingProducts || !Array.isArray(existingProducts)) {
+            console.log('No valid products found, creating empty list');
             write([]);
           } else {
-            console.log('Found existing products, keeping them');
+            console.log('Found existing products:', existingProducts.length);
           }
           
           console.log('Rendering admin panel...');
