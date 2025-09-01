@@ -132,22 +132,39 @@
         let products = [];
         
         try {
-          // Get products from localStorage
-          const storedProducts = localStorage.getItem('admin-products');
-          console.log('Checking stored products...');
+          // Get products from localStorage with proper error handling
+          let storedProducts;
+          try {
+            storedProducts = localStorage.getItem('admin-products');
+            console.log('Retrieved stored products from localStorage');
+          } catch (e) {
+            console.error('Error accessing localStorage:', e);
+            grid.innerHTML = '<div class="muted">Error loading products. Please try refreshing the page.</div>';
+            return;
+          }
           
           if (!storedProducts) {
-            throw new Error('No products found in storage');
+            console.log('No products found in storage');
+            grid.innerHTML = '<div class="muted">No products available. Please check back later.</div>';
+            return;
           }
 
-          // Parse the stored products
-          const parsedProducts = JSON.parse(storedProducts);
-          if (!Array.isArray(parsedProducts)) {
-            throw new Error('Invalid product data format');
+          // Parse the stored products with validation
+          try {
+            const parsedProducts = JSON.parse(storedProducts);
+            if (!Array.isArray(parsedProducts)) {
+              throw new Error('Invalid product data format');
+            }
+            products = parsedProducts;
+            console.log(`Successfully loaded ${products.length} products`);
+          } catch (e) {
+            console.error('Error parsing products:', e);
+            grid.innerHTML = '<div class="muted">Error loading products. Please try refreshing the page.</div>';
+            return;
           }
 
           // Filter products for home page
-          products = parsedProducts.filter(p => 
+          products = products.filter(p => 
             p && p.categories && Array.isArray(p.categories) && p.categories.includes('home')
           );
           console.log(`Found ${products.length} products for home page`);
