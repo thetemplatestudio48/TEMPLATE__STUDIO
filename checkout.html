@@ -60,7 +60,6 @@
             <select id="method" class="input" required>
               <option value="" selected disabled>Select payment method</option>
               <option value="esewa">eSewa</option>
-              <option value="paypal">PayPal</option>
               <option value="payoneer">Payoneer</option>
               <option value="bank">Bank Transfer</option>
             </select>
@@ -93,59 +92,9 @@
             <a class="btn" href="./cart.html">Back to cart</a>
           </div>
         </div>
-        <div style="margin-top:8px;">
-          <button class="btn" onclick="testEmailJS()" style="font-size:12px;padding:4px 8px;">Test EmailJS</button>
-          <span class="muted" style="margin-left:8px;font-size:12px;">Test email service before placing order</span>
-        </div>
       </div>
     </main>
 
-    <div id="qrModal" class="modal">
-      <div class="panel">
-        <div class="row" style="justify-content:space-between">
-          <h3>Scan to Pay</h3>
-          <button id="closeQR" class="btn">Close</button>
-        </div>
-        <div style="display:grid; gap:12px; padding:12px">
-          <label>Choose payment method</label>
-          <select id="method" class="input">
-            <option value="" selected disabled>Choose a method</option>
-            <option value="esewa">eSewa</option>
-            <option value="paypal">PayPal</option>
-            <option value="payoneer">Payoneer</option>
-            <option value="bank">Bank Transfer</option>
-          </select>
-          <div id="paymentDetails" style="display:none; margin-top:12px; padding:12px; background:rgba(255,255,255,0.05); border-radius:8px;">
-            <div id="esewaDetails" class="payment-details" style="display:none">
-              <h4 style="margin:0 0 8px 0">eSewa Payment Details</h4>
-              <p style="margin:0 0 4px 0">Scan the QR code or send to:</p>
-              <p style="margin:0 0 8px 0"><strong>eSewa ID:</strong> 9840251094</p>
-            </div>
-            <div id="paypalDetails" class="payment-details" style="display:none">
-              <h4 style="margin:0 0 8px 0">PayPal Payment Details</h4>
-              <p style="margin:0 0 4px 0">Send payment to:</p>
-              <p style="margin:0 0 8px 0"><strong>PayPal:</strong> templatestudio@gmail.com</p>
-            </div>
-            <div id="payoneerDetails" class="payment-details" style="display:none">
-              <h4 style="margin:0 0 8px 0">Payoneer Payment Details</h4>
-              <p style="margin:0 0 4px 0">Send payment to:</p>
-              <p style="margin:0 0 8px 0"><strong>Email:</strong> templatestudio@gmail.com</p>
-            </div>
-            <div id="bankDetails" class="payment-details" style="display:none">
-              <h4 style="margin:0 0 8px 0">Bank Transfer Details</h4>
-              <p style="margin:0 0 4px 0"><strong>Bank:</strong> Nepal Bank Limited</p>
-              <p style="margin:0 0 4px 0"><strong>Account Name:</strong> Template Studio</p>
-              <p style="margin:0 0 4px 0"><strong>Account Number:</strong> 1234567890</p>
-              <p style="margin:0 0 8px 0"><strong>Branch:</strong> Main Branch</p>
-            </div>
-          </div>
-          <div style="position:relative; display:grid; place-items:center; margin-top:12px;">
-            <button id="qrBack" aria-label="Back" title="Back" class="btn" style="position:absolute; right:8px; top:8px; display:none; padding:4px 8px">✕</button>
-            <img id="qrImg" src="" alt="QR Code" style="display:none; max-width:100%; height:auto; border:1px solid var(--border); border-radius:12px" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('beforeend', '<div class=\'muted\'>QR code not available for this payment method</div>')" />
-          </div>
-        </div>
-      </div>
-    </div>
     <footer class="footer">© <span id="year"></span> Template Studio</footer>
 
     <script>
