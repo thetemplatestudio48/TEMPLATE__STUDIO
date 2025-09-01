@@ -101,13 +101,55 @@
       const STORAGE_KEY = 'admin-products';
       const fmt = v => (v / 100).toFixed(2);
       const read = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      const write = (list) => localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      const write = (list) => {
+        try {
+          // Validate the data before saving
+          if (!Array.isArray(list)) {
+            console.error('Invalid product list format');
+            throw new Error('Invalid product list format');
+          }
+          
+          // Ensure all required fields are present
+          list.forEach((product, index) => {
+            if (!product.id || !product.title) {
+              console.error(`Invalid product at index ${index}`);
+              throw new Error(`Invalid product at index ${index}`);
+            }
+          });
+
+          // Save to localStorage
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+          console.log(`Successfully saved ${list.length} products`);
+          
+          // Verify the save was successful
+          const verification = localStorage.getItem(STORAGE_KEY);
+          if (!verification) {
+            throw new Error('Failed to verify saved data');
+          }
+        } catch (e) {
+          console.error('Error saving products:', e);
+          alert('Error saving products. Please try again.');
+          throw e;
+        }
+      };
+
       const $ = (id) => document.getElementById(id);
 
       function getProducts() {
-        return read() || [];
+        try {
+          const data = read();
+          return Array.isArray(data) ? data : [];
+        } catch (e) {
+          console.error('Error reading products:', e);
+          return [];
+        }
       }
+
       function setProducts(list) {
+        if (!Array.isArray(list)) {
+          console.error('Invalid product list');
+          return;
+        }
         write(list);
       }
       function uid() { return 'p_' + Math.random().toString(36).slice(2, 9); }
